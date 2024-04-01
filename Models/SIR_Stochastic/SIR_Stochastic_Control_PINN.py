@@ -8,7 +8,7 @@ import time
 
 ### Define many of the constants
 #Performance:
-iterations = 20000
+iterations = 200000
 
 NETWORK_SIZE=400
 MIN_STATE = 0.0
@@ -20,7 +20,7 @@ PDE_SAMPLES=10000
 ### Define the parameters
 # Cost weights
 c1=1.0
-c2=1.0
+c2=3.0
 
 # Dynamics
 beta=1.5
@@ -178,9 +178,10 @@ for epoch in range(iterations):
     loss.backward() # Computing gradients
     optimizer.step() # ADAM optimization step.
     
-    if best_loss < loss_checkpoints[current_loss_checkpoint_index]:
-        torch.save(net,"Checkpoints/"+loss_checkpoint_files[current_loss_checkpoint_index])
-        current_loss_checkpoint_index += 1
+    if current_loss_checkpoint_index < len(loss_checkpoints):
+        if best_loss < loss_checkpoints[current_loss_checkpoint_index]:
+            torch.save(net,"Checkpoints/"+loss_checkpoint_files[current_loss_checkpoint_index])
+            current_loss_checkpoint_index += 1
     
     if epoch % 100 == 0:
         best_losses.append(best_loss)
@@ -190,8 +191,8 @@ for epoch in range(iterations):
 
 end = time.time()
 
-np.savetxt("losses.txt",best_losses)
-np.savetxt("epochs.txt",loss_epochs)
+np.savetxt("LossTrajectories/losses.txt",best_losses)
+np.savetxt("LossTrajectories/epochs.txt",loss_epochs)
 
 net = torch.load("Checkpoints/"+"bestmodel.pt")
 net_bc_out = net(pt_S_bc, pt_I_bc, pt_R_bc, pt_t_bc)
@@ -203,5 +204,5 @@ print(loss.data)
 
 print(f'Time taken: {end-start}')
 
-torch.save(net,"Checkpoints/"+"LV_Stochastic_Control_Value.pt")
+torch.save(net,"Checkpoints/"+"SIR_Stochastic_Control_Value.pt")
 
