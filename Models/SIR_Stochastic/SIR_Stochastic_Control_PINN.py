@@ -8,7 +8,7 @@ import time
 
 ### Define many of the constants
 #Performance:
-iterations = 200000
+iterations = 100000
 
 NETWORK_SIZE=400
 MIN_STATE = 0.0
@@ -20,7 +20,7 @@ PDE_SAMPLES=10000
 ### Define the parameters
 # Cost weights
 c1=1.0
-c2=3.0
+c2=5.0
 
 # Dynamics
 beta=1.5
@@ -99,7 +99,7 @@ def f(S,I,R,t,net):
     u_star_c = torch.clamp(u_star, u_min, u_max)
     
     # Define the various components of the HJB pde (so as to avoid an especially long expression).
-    Integral_Cost = c1*u_star_c**2 + c2*I 
+    Integral_Cost = c1*u_star_c**2 + c2*I**2
     
     u_S_term = u_S*(-(1-u_star_c)*beta*S*I)
     u_I_term = u_I*((1-u_star_c)*beta*S*I - gamma*I)
@@ -191,8 +191,8 @@ for epoch in range(iterations):
 
 end = time.time()
 
-np.savetxt("LossTrajectories/losses.txt",best_losses)
-np.savetxt("LossTrajectories/epochs.txt",loss_epochs)
+np.savetxt("TrainingLossTrajectories/losses.txt",best_losses)
+np.savetxt("TrainingLossTrajectories/epochs.txt",loss_epochs)
 
 net = torch.load("Checkpoints/"+"bestmodel.pt")
 net_bc_out = net(pt_S_bc, pt_I_bc, pt_R_bc, pt_t_bc)

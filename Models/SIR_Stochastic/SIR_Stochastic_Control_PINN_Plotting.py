@@ -11,8 +11,7 @@ import warnings
 import matplotlib.pyplot as plt
 
 ### Define many of the constants
-#Performance:
-iterations = 100000
+NUM_TRAJECTORIES = 30
 
 NETWORK_SIZE=400
 MIN_STATE = 0.0
@@ -24,7 +23,7 @@ PDE_SAMPLES=10000
 ### Define the parameters
 # Cost weights
 c1=1.0
-c2=1.0
+c2=5.0
 
 # Dynamics
 beta=1.5
@@ -167,7 +166,7 @@ def diffusion(y,t):
     return np.array([[-sigma_beta*S*I,0,sigma_S*S, 0, 0],[sigma_beta*S*I, -sigma_gamma*I,0,sigma_I*I,0],[0,sigma_gamma*I,0,0,sigma_R*R]])
     
 # Integrate uncontrolled system
-NUM_TRAJECTORIES = 20
+
 
 ts = []
 Xs = []
@@ -233,16 +232,53 @@ for j in range(NUM_TRAJECTORIES):
         control.append(U(X2s[j][:,0][i],X2s[j][:,1][i],X2s[j][:,2][i],t2s[j][i]))
     controls.append(control)
 
+# Compute Losses
+
+#print(len(Xs[1][:,1]))
+#print(controls[2])
+#print(len(controls[2]))
+
+def Loss(t,X,u=None):
+    l = 0.0
+    I = X[:,1]
+    if u==None:
+        for i in range(len(t)-1):
+            l += (t[i+1]-t[i])*c2*I[i]**2
+        return l
+    else:
+        for i in range(len(t)-1):
+            l += (t[i+1]-t[i])*(c1*u[i]**2 +c2*I[i]**2)
+        return l
+
+uncontrolled_losses = [] 
+controlled_losses = []
+
+for i in range(NUM_TRAJECTORIES):
+    uncontrolled_losses.append(Loss(ts[i],Xs[i]))
+    controlled_losses.append(Loss(t2s[i],X2s[i],controls[i]))
+
+np.savetxt("Losses/SIR_UncontrolledLosses.txt",uncontrolled_losses)
+np.savetxt("Losses/SIR_ControlledLosses.txt",controlled_losses)
+
+print(f"Uncontrolled losses mean: {np.mean(uncontrolled_losses)}")
+print(f"Controlled losses mean: {np.mean(controlled_losses)}")
+
+print(f"Uncontrolled losses variance: {np.var(uncontrolled_losses)}")
+print(f"Controlled losses variance: {np.var(controlled_losses)}")
 ### Make Plots
+
+YTICKS = [0.0,0.2,0.4,0.6,0.8,1.0]
+XTICKS = [0,2,4,6,8,10,12,14,16]
+
 
 ALPHA = 0.2
 # Plot Uncontrolled System
 
 fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(4, 6),sharex="col")
 
-axs[0].set_title("Uncontrolled Target Cell System")
+axs[0].set_title("Uncontrolled SIR System")
 for i in range(NUM_TRAJECTORIES):
-    axs[0].plot(ts[i], [max(0, x) for x in Xs[i][:,0]],label="U: Uninfected Cells",color="green",alpha=ALPHA)
+    axs[0].plot(ts[i], [max(0, x) for x in Xs[i][:,0]],label="S: Susceptible",color="green",alpha=ALPHA)
 
 handles, labels = axs[0].get_legend_handles_labels()
 handle_list, label_list = [], []
@@ -251,9 +287,10 @@ for handle, label in zip(handles, labels):
         handle_list.append(handle)
         label_list.append(label)
 axs[0].legend(handle_list, label_list,loc='upper right')
+axs[0].set_yticks(YTICKS)
 
 for i in range(NUM_TRAJECTORIES):
-    axs[1].plot(ts[i], [max(0, x) for x in Xs[i][:,1]],label="I: Infected Cells",color="blue",alpha=ALPHA)
+    axs[1].plot(ts[i], [max(0, x) for x in Xs[i][:,1]],label="I: Infected",color="blue",alpha=ALPHA)
 
 handles, labels = axs[1].get_legend_handles_labels()
 handle_list, label_list = [], []
@@ -262,9 +299,10 @@ for handle, label in zip(handles, labels):
         handle_list.append(handle)
         label_list.append(label)
 axs[1].legend(handle_list, label_list,loc='upper right')
+axs[1].set_yticks(YTICKS)
 
 for i in range(NUM_TRAJECTORIES):
-    axs[2].plot(ts[i], [max(0, x) for x in Xs[i][:,2]],label="P: Virus",color="darkorange",alpha=ALPHA)
+    axs[2].plot(ts[i], [max(0, x) for x in Xs[i][:,2]],label="R: Recovered",color="darkorange",alpha=ALPHA)
 
 axs[2].set_xlabel("t: Time")
 
@@ -275,9 +313,10 @@ for handle, label in zip(handles, labels):
         handle_list.append(handle)
         label_list.append(label)
 axs[2].legend(handle_list, label_list,loc='upper right')
-
+axs[2].set_yticks(YTICKS)
+axs[2].set_xticks(XTICKS)
 plt.tight_layout()  # Adjust subplot parameters to give specified padding
-plt.savefig("Images/SIR_Stochastic_Uncontrolled_Multiple.png")
+plt.savefig("Images/SIR_Stochastic_Uncontrolled_Multiple.pdf", transparent=True)
 
 
 
@@ -286,9 +325,9 @@ plt.savefig("Images/SIR_Stochastic_Uncontrolled_Multiple.png")
 fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(4, 8),sharex="col")
 
 #plt.suptitle('Overall Title', fontsize=16)
-axs[0].set_title("Controlled Target Cell System")
+axs[0].set_title("Controlled SIR System")
 for i in range(NUM_TRAJECTORIES):
-    axs[0].plot(t2s[i], [max(0, x) for x in X2s[i][:,0]],label="U: Uninfected Cells",color="green",alpha=ALPHA)
+    axs[0].plot(t2s[i], [max(0, x) for x in X2s[i][:,0]],label="S: Susceptible",color="green",alpha=ALPHA)
 
 #axs[0].set_ylabel("Population")
 handles, labels = axs[0].get_legend_handles_labels()
@@ -298,9 +337,10 @@ for handle, label in zip(handles, labels):
         handle_list.append(handle)
         label_list.append(label)
 axs[0].legend(handle_list, label_list,loc='upper right')
+axs[0].set_yticks(YTICKS)
 
 for i in range(NUM_TRAJECTORIES):
-    axs[1].plot(t2s[i], [max(0, x) for x in X2s[i][:,1]],label="I: Infected Cells",color="blue",alpha=ALPHA)
+    axs[1].plot(t2s[i], [max(0, x) for x in X2s[i][:,1]],label="I: Infected",color="blue",alpha=ALPHA)
 
 #axs[1].set_ylabel("Population")
 handles, labels = axs[1].get_legend_handles_labels()
@@ -312,10 +352,10 @@ for handle, label in zip(handles, labels):
 axs[1].legend(handle_list, label_list,loc='upper right')
 # Create a new legend using the unique labels and handles
 #axs[1].legend(unique_labels.values(), unique_labels.keys(),loc='upper right')
-
+axs[1].set_yticks(YTICKS)
 
 for i in range(NUM_TRAJECTORIES):
-    axs[2].plot(t2s[i], [max(0, x) for x in X2s[i][:,2]],label="P: Virus",color="darkorange",alpha=ALPHA)
+    axs[2].plot(t2s[i], [max(0, x) for x in X2s[i][:,2]],label="R: Recovered",color="darkorange",alpha=ALPHA)
 
 handles, labels = axs[2].get_legend_handles_labels()
 handle_list, label_list = [], []
@@ -324,7 +364,7 @@ for handle, label in zip(handles, labels):
         handle_list.append(handle)
         label_list.append(label)
 axs[2].legend(handle_list, label_list,loc='upper right')
-
+axs[2].set_yticks(YTICKS)
 
 for i in range(NUM_TRAJECTORIES):
     axs[3].plot(t2s[i], [max(0, x) for x in controls[i]],label="u: Control",color="red",alpha=ALPHA)
@@ -336,8 +376,8 @@ for handle, label in zip(handles, labels):
         handle_list.append(handle)
         label_list.append(label)
 axs[3].legend(handle_list, label_list,loc='upper right')
-
+axs[3].set_xticks(XTICKS)
 axs[3].set_xlabel("t: Time")
 
 plt.tight_layout()  # Adjust subplot parameters to give specified padding
-plt.savefig("Images/TargetCellModel_Stochastic_Controlled_Multiple.png")
+plt.savefig("Images/SIR_Stochastic_Controlled_Multiple.pdf", transparent=True)
